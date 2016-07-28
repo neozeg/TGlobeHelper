@@ -1,0 +1,14 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <item
+        android:id="@+id/file_menu_open"
+        android:title="Open"/>
+
+    <item
+        android:id="@+id/file_menu_save"
+        android:title="Save"/>
+    <item
+        android:id="@+id/file_menu_exit"
+        android:title="Exit"/>
+
+</menu>

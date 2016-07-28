@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/app/src/main/java/com/example/tglobehelper/features/CallbackBundle.java" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable/filedialog_file.png" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable/filedialog_folder.png" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable/filedialog_folder_up.png" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable/filedialog_root.png" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/drawable/filedialog_wavfile.png" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/app/src/main/res/layout/filedialogitem.xml" charset="GBK" />
+    <file url="PROJECT" charset="UTF-8" />
+  </component>
+</project>
