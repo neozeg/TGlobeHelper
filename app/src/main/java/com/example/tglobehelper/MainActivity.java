@@ -37,8 +37,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
 import java.util.logging.LogRecord;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,9 +50,19 @@ public class MainActivity extends Activity {
     private final static int OPEN_FILE_DIALOG_ID = 101;
     private final static int SAVE_FILE_DIALOG_ID = 102;
 
+    private final static int MAX_QUESTION_NUM = 83;
+
     private final static int MSG_PROGRESS_DIALOG = 10;
     private final static int MSG_PROGRESS_DIALOG_DISSMISS = 11;
     private final static String EXTRA_STRING = "extra_string";
+
+
+    private final static String EXTRA_Q_NAME = "EXTRA_Q_NAME";
+    private final static String EXTRA_Q_TYPE = "EXTRA_Q_TYPE";
+    private final static String EXTRA_Q_TYPE2 = "EXTRA_Q_TYPE2";
+    private final static String EXTRA_Q_RANGE = "EXTRA_Q_RANGE";
+    private final static String EXTRA_Q_TOTALANS = "EXTRA_Q_TOTALANS";
+    private final static String EXTRA_Q_HELP = "EXTRA_Q_HELP";
 
     private final static String FIRST_COMMENT = "//Q_Range,Q_Type,Q_Type2,Q_TotalAns,Q_Help,rght_cnt,wrong_cnt,reserved\n";
     private final static String FIRST_8Bytes = "DW\t0,0,0,0,0,0,0,0\n";
@@ -79,7 +91,10 @@ public class MainActivity extends Activity {
                     "reserved"
             };
 
+
     private String[] NotExistSoundList;
+
+    private List<Map<String,Object>> QuestionList;
 
     private int[] firstlineData = {0,0,0,0,0,0,0,0};
 
@@ -117,7 +132,21 @@ public class MainActivity extends Activity {
             }
         }
 
+        QuestionList = new ArrayList<Map<String, Object>>();
+        for(int i=0;i<MAX_QUESTION_NUM;i++){
+            Map<String,Object> map = new HashMap<String, Object>();
+            map.put(EXTRA_Q_NAME,UserTable.QUESION_NAME[i]);
+            map.put(EXTRA_Q_RANGE,UserTable.Q_RANGE[i]);
+            map.put(EXTRA_Q_TYPE,UserTable.Q_TYPE[i]);
+            map.put(EXTRA_Q_TYPE2,UserTable.Q_TYPE2[i]);
+            map.put(EXTRA_Q_TOTALANS,UserTable.Q_TOTALANS[i]);
+            map.put(EXTRA_Q_HELP,UserTable.Q_HELP[i]);
+            QuestionList.add(map);
+        }
+
         setupViewComponents();
+
+
     }
 
     private Handler mHandler = new Handler() {
@@ -356,11 +385,18 @@ public class MainActivity extends Activity {
         return convertTextFile(file);
     }
 
+    private boolean contains(String str,String[] strTable){
+        for(String strCmp:strTable){
+            if(str.contains(strCmp)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     private String convertTextFile(File file){
         //File file = new File(path);
         StringBuilder stringbuilder = new StringBuilder();
-        //stringbuilder.append(FIRST_COMMENT);
-        //stringbuilder.append(FIRST_8Bytes);
         String string = null;
         int semicolonCnt  = 0;
         int partCnt = 0;
@@ -370,11 +406,62 @@ public class MainActivity extends Activity {
         BufferedReader reader;
         boolean isHelpExist = false;
         boolean isSubLine = false;
-
         Pattern pattern = Pattern.compile(FILTER_PATTERN);
+        //Analysis
         try{
             reader = new BufferedReader(new FileReader(file));
             while((string=reader.readLine()) != null){
+                if(!string.contains(";") && (string.indexOf(';')<5)){
+                    semicolonCnt = 0;
+                    int subLineIndex = string.indexOf(' ');
+                    isSubLine = (subLineIndex<5 && subLineIndex>-1);
+                    if(isSubLine){
+                        subLineCnt ++;
+                        if(subLineCnt == 2)isHelpExist=true;
+                    }else{
+                        subLineCnt=0;
+                    }
+                    lineCnt++;
+                }else{
+                    if(semicolonCnt == 0) {
+                        if(partCnt==1){
+                            lineOfSet = subLineCnt + 1;
+                            firstlineData[5] = lineCnt;
+                        }
+                        partCnt++;
+                        lineCnt = 0;
+                    }
+                    semicolonCnt++;
+                }
+            }
+            //firstlineData[6] = lineCnt;
+            reader.close();
+
+        }catch(IOException e){
+            e.printStackTrace();
+            return null;
+        }
+        if(isHelpExist)firstlineData[4]=1;
+
+
+        //process
+        semicolonCnt  = 0;
+        partCnt = 0;
+        lineCnt = 0;
+        subLineCnt = 0;
+        isHelpExist = false;
+        isSubLine = false;
+
+        int readlineCnt = 0;
+        String[] strSet = new String[lineOfSet];
+        boolean[] isSublines = new boolean[lineOfSet];
+        int[] subLineCnts = new int[lineOfSet];
+        int pntStrSet = 0;
+        boolean isLineValid = true;
+        try{
+            reader = new BufferedReader(new FileReader(file));
+            while((string=reader.readLine()) != null){
+
                 if(!string.contains(";") && (string.indexOf(';')<5)){
                     semicolonCnt = 0;
                     int wordCnt = 0;
@@ -399,24 +486,54 @@ public class MainActivity extends Activity {
                         b.append(USER_END_WORD);
                         if(i<3)b.append(USER_DIVIDER);
                     }
-                    string = b.toString();
 
-                    lineCnt++;
-
-                    if(isSubLine){
-                        switch(subLineCnt){
-                            case 1:
-                                stringbuilder.append("DW\t\t"+string+SUBLINE1_COMMENT+"\n");
+                    strSet[pntStrSet] = b.toString();
+                    isSublines[pntStrSet] = isSubLine;
+                    subLineCnts[pntStrSet] = subLineCnt;
+                    string = strSet[pntStrSet];
+                    pntStrSet++;
+                    if(pntStrSet>=strSet.length)pntStrSet=0;
+                    //if(contains(string,NotExistSoundList))isLineValid = false;
+                    if(partCnt == 1 && pntStrSet==0){
+                        isLineValid = true;
+                        for(int i=0;i<strSet.length;i++){
+                            if(contains(strSet[i],NotExistSoundList))
+                            {
+                                isLineValid = false;
                                 break;
-                            case 2:
-                                stringbuilder.append("DW\t\t"+string+SUBLINE2_COMMENT+"\n");
-                                break;
-                            default:
-                                stringbuilder.append("DW\t\t"+string+SUBLINE3_COMMENT+"\n");
+                            }
                         }
-
+                    }else{
+                        isLineValid = !contains(string,NotExistSoundList);
                     }
-                    else stringbuilder.append("DW\t"+string+"\n");
+                    if(isLineValid){
+                        if(partCnt == 1){
+                            if(pntStrSet == 0){
+                                for(int i=0;i<lineOfSet;i++){
+                                    lineCnt++;
+                                    string = strSet[i];
+                                    if(isSublines[i]){
+                                        switch(subLineCnts[i]){
+                                            case 1:
+                                                stringbuilder.append("DW\t\t"+string+SUBLINE1_COMMENT+"\n");
+                                                break;
+                                            case 2:
+                                                stringbuilder.append("DW\t\t"+string+SUBLINE2_COMMENT+"\n");
+                                                break;
+                                            default:
+                                                stringbuilder.append("DW\t\t"+string+SUBLINE3_COMMENT+"\n");
+                                        }
+                                    }
+                                    else stringbuilder.append("DW\t"+string+"\n");
+                                }
+                            }
+                        }else{
+                            lineCnt++;
+                            stringbuilder.append("DW\t"+string+"\n");
+                        }
+                    }
+
+
                 }else{
                     if(semicolonCnt == 0) {
                         stringbuilder.append(";Part\t" + partCnt+"\n");
@@ -438,19 +555,38 @@ public class MainActivity extends Activity {
             return null;
         }
 
-        if(isHelpExist)firstlineData[4]=1;
+        String name = file.getName().toLowerCase();
+        int tabIndex = 0;
+        for(int i=0;i<MAX_QUESTION_NUM;i++){
+            String str = UserTable.QUESION_NAME[i].toLowerCase();
+            if(name.contains(str)){
+                tabIndex = i;
+                break;
+            }
+        }
+        int Q_Range = UserTable.Q_RANGE[tabIndex];
+        int Q_Type = UserTable.Q_TYPE[tabIndex];
+        int Q_Type2 = UserTable.Q_TYPE2[tabIndex];
+        int Q_TotalAns = UserTable.Q_TOTALANS[tabIndex];
+        int Q_Help = UserTable.Q_HELP[tabIndex];
+        firstlineData[0] = Q_Range;
+        firstlineData[1] = Q_Type;
+        firstlineData[2] = Q_Type2;
+        firstlineData[3] = Q_TotalAns;
+        firstlineData[4] = Q_Help;
+
 
         String result = "";
 
         //////////////////////////////////////////////
         //Header
         //////////////////////////////////////////////
-        /*
+        /**/
         result += ";" + file.getName() + "\n";
         for(int i=0;i<8;i++){
             result += ";" + FIRST_COMMENTS[i] +"\n";
             result += "DW\t" + Integer.toString(firstlineData[i]) + "\n";
-        }*/
+        }
         //////////////////////////////////////////////
         result +=stringbuilder.toString();
         result += "\n//line of set is: "+lineOfSet;
