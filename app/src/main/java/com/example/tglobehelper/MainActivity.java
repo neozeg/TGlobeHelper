@@ -1193,6 +1193,9 @@ public class MainActivity extends Activity {
         String qName = "_"+ (tabFound?UserTable.QUESION_NAME[tabIndex]:"NIL");
         int qPart1Cnt = 0;
         List<String> labelList = new ArrayList<String>();
+        List<String> mainList = new ArrayList<String>();
+        List<String> subList = new ArrayList<String>();
+        List<String> wrongList = new ArrayList<String>();
 
 
         StringBuilder stringbuilder = new StringBuilder();
@@ -1218,21 +1221,6 @@ public class MainActivity extends Activity {
                     semicolonCnt = 0;
                     int subLineIndex = string.indexOf(' ');
                     isSubLine = (subLineIndex<5 && subLineIndex>-1);
-                    if(isSubLine){
-                        subLineCnt ++;
-                    }else{
-                        if(partCnt==1){
-                            String label = qName+"_"+mainLineCnt;
-                            labelList.add(label);
-                            stringbuilder.append(label+":\n");
-                        }
-                        stringbuilder.append(mainString);
-                        stringbuilder.append(subString);
-                        subLineCnt=0;
-                        subString = "";
-                        mainString = "";
-                        mainLineCnt++;
-                    }
 
                     Matcher m = pattern.matcher(string);
                     String str = "";
@@ -1257,6 +1245,24 @@ public class MainActivity extends Activity {
                         mainString += b.toString();
                         mainString += "\n";
                     }
+
+
+                    if(isSubLine){
+                        subLineCnt ++;
+                    }else{
+                        if(partCnt==1){
+                            String label = qName+"_"+mainLineCnt;
+                            labelList.add(label);
+                            stringbuilder.append(label+":\n");
+                        }
+                        stringbuilder.append(mainString);
+                        //stringbuilder.append(subString);
+                        subLineCnt=0;
+                        subString = "";
+                        mainString = "";
+                        mainLineCnt++;
+                    }
+
 
                 }else{
                     if(semicolonCnt == 0) {
