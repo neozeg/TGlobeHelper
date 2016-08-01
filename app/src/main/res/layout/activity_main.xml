@@ -20,19 +20,44 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Edit"
-            android:id="@+id/buttonEdit" />
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:text="Open"
             android:id="@+id/buttonOpen" />
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Save"
-            android:id="@+id/buttonSave" />
+            android:text="Normal"
+            android:id="@+id/buttonNormal" />
 
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BatchSave"
+            android:id="@+id/buttonBatchSave" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Q5"
+            android:id="@+id/buttonQ5" />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Q6"
+            android:id="@+id/buttonQ6" />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Q22"
+            android:id="@+id/buttonQ22" />
     </LinearLayout>
 
     <ScrollView
@@ -65,4 +90,5 @@
             android:textSize="10dp"
             android:id="@+id/textViewTarget" />
     </ScrollView>
+
 </LinearLayout>
