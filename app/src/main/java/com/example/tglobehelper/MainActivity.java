@@ -12,6 +12,7 @@ import android.text.SpannableStringBuilder;
 import android.text.style.CharacterStyle;
 import android.text.style.ForegroundColorSpan;
 import android.util.Log;
+import android.util.StringBuilderPrinter;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -1191,43 +1192,40 @@ public class MainActivity extends Activity {
         firstlineData[4] = Q_Help;
 
         String qName = "_"+ (tabFound?UserTable.QUESION_NAME[tabIndex]:"NIL");
-        int qPart1Cnt = 0;
+
         List<String> labelList = new ArrayList<String>();
         List<String> mainList = new ArrayList<String>();
-        List<String> subList = new ArrayList<String>();
+        List<List<String>> subList = new ArrayList<List<String>>();
+        List<String> subListContent;
         List<String> wrongList = new ArrayList<String>();
+        List<boolean[]> validLineList = new ArrayList<boolean[]>();
 
 
-        StringBuilder stringbuilder = new StringBuilder();
-        //stringbuilder.append(FIRST_COMMENT);
-        //stringbuilder.append(FIRST_8Bytes);
-        String string = null;
+        //StringBuilder stringbuilder = new StringBuilder();
+
+        String lineString = null;
         String mainString = "";
         String subString = "";
         int semicolonCnt  = 0;
         int partCnt = 0;
         int lineCnt = 0;
-        int mainLineCnt = 0;
-        int subLineCnt = 0;
-        int subLineMax = 0;
         BufferedReader reader;
         boolean isSubLine = false;
 
         Pattern pattern = Pattern.compile(FILTER_PATTERN);
         try{
             reader = new BufferedReader(new FileReader(file));
-            while((string=reader.readLine()) != null){
-                if(!string.contains(";") && (string.indexOf(';')<5)){
+            while((lineString=reader.readLine()) != null){
+                if(!lineString.contains(";") && (lineString.indexOf(';')<5)){
                     semicolonCnt = 0;
-                    int subLineIndex = string.indexOf(' ');
-                    isSubLine = (subLineIndex<5 && subLineIndex>-1);
 
-                    Matcher m = pattern.matcher(string);
+                    Matcher m = pattern.matcher(lineString);
                     String str = "";
                     StringBuilder b = new StringBuilder();
+
                     int wordCnt = 0;
                     while (m.find()){
-                        str = string.substring(m.start(),m.end());
+                        str = lineString.substring(m.start(),m.end());
                         b.append(str);
                         wordCnt++;
                         if(wordCnt<4)b.append(USER_DIVIDER);
@@ -1236,42 +1234,48 @@ public class MainActivity extends Activity {
                         b.append(USER_END_WORD);
                         if(i<3)b.append(USER_DIVIDER);
                     }
-                    if(isSubLine){
-                        subString += "DW\t\t";
-                        subString += b.toString();
-                        subString += "\n";
-                    }else{
-                        mainString += "DW\t";
-                        mainString += b.toString();
-                        mainString += "\n";
-                    }
 
 
+                    boolean isLineValid = !contains(lineString,NotExistSoundList);
+
+                    int subLineIndex = lineString.indexOf(' ');
+                    isSubLine = (subLineIndex<5 && subLineIndex>-1);
+
                     if(isSubLine){
-                        subLineCnt ++;
+                        if(isLineValid){
+                            subString = "DW\t\t";
+                            subString += b.toString();
+                            if(partCnt==1){
+                                subList.get(subList.size()-1).add(subString);
+                            }
+                        }/*else{
+                            subString = ";\tDW\t\t";
+                        }*/
                     }else{
-                        if(partCnt==1){
-                            String label = qName+"_"+mainLineCnt;
-                            labelList.add(label);
-                            stringbuilder.append(label+":\n");
+                        if(isLineValid){
+                            mainString = "DW\t";
+                        }else{
+                            mainString = ";\tDW\t";
                         }
-                        stringbuilder.append(mainString);
-                        //stringbuilder.append(subString);
-                        subLineCnt=0;
-                        subString = "";
-                        mainString = "";
-                        mainLineCnt++;
+                        mainString += b.toString();
+                        if(partCnt==1){
+                            String label = qName+"_"+mainList.size();
+                            labelList.add(label);
+                            subListContent = new ArrayList<String>();
+                            mainList.add(mainString);
+                            subList.add(subListContent);
+                            validLineList.add(new boolean[]{isLineValid});
+                        }else{
+                            if(isLineValid)
+                                wrongList.add(mainString);
+                        }
                     }
-
-
                 }else{
                     if(semicolonCnt == 0) {
                         if(partCnt == 1){
                             String label = qName+"_WRONG_ANS";
                             labelList.add(label);
-                            stringbuilder.append(label+":\n");
                         }
-                        stringbuilder.append(";Part\t" + partCnt+"\n");
                         partCnt++;
                         lineCnt = 0;
                     }
@@ -1280,7 +1284,7 @@ public class MainActivity extends Activity {
 
             }
             firstlineData[5] = labelList.size()-1;
-            firstlineData[6] = lineCnt;
+            firstlineData[6] = wrongList.size();
             reader.close();
 
         }catch(IOException e){
@@ -1288,6 +1292,7 @@ public class MainActivity extends Activity {
             return null;
         }
         String result = "";
+
 
         //////////////////////////////////////////////
         //Header
@@ -1306,12 +1311,29 @@ public class MainActivity extends Activity {
         }
         //////////////////////////////////////////////
         //Contents
-        result +=stringbuilder.toString();
-        //////////////////////////////////////////////
+        StringBuilder contentString = new StringBuilder();
+        for(int i=0;i<mainList.size();i++){
+            String validSign = validLineList.get(i)[0]?"":";";
+            contentString.append(labelList.get(i)).append(":\n");
+            contentString.append(validSign).append(mainList.get(i)).append("\n");
+            contentString.append(validSign).append("\tDW\t" +subList.get(i).size()).append(","+USER_END_WORD).append(","+USER_END_WORD).append(","+USER_END_WORD).append(";Counts\n");
+            for(int j=0;j<subList.get(i).size();j++){
+                contentString.append(validSign).append(subList.get(i).get(j)).append(";"+j+"\n");
+            }
+        }
+        contentString.append(labelList.get(labelList.size()-1)).append(":\n");
+        for(String str:wrongList){
+            contentString.append(str).append("\n");
+        }
+        result +=contentString.toString();
 
+
+        //////////////////////////////////////////////
+        /*
         if(subLineMax >=3){
             result += "\n//subLineMax is: "+subLineMax;
         }
+        */
         return result;
     }
     private String readTxtFile(String path){
