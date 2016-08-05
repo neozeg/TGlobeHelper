@@ -78,6 +78,7 @@ public class MainActivity extends Activity {
 
     //private final static String FILTER_PATTERN = "\\w{10,}";
     private final static String FILTER_PATTERN = "SPI_SN\\d{4}";
+    private final static String NUMBER_PATTERN = " \\d{1,}";
     private final static String USER_END_WORD = "SPI_SN_END";
     private final static String USER_DIVIDER = ",\t";
 
@@ -101,7 +102,7 @@ public class MainActivity extends Activity {
     private int[] firstlineData = {0,0,0,0,0,0,0,0};
 
     //view components
-    private Button mBtnFile,mBtnNormal,mBtnQ5,mBtnQ6,mBtnQ22,mBtnOpen,mBtnBatchSave;
+    private Button mBtnFile,mBtnNormal,mBtnQ5,mBtnQ6,mBtnQ22,mBtnQ27,mBtnOpen,mBtnBatchSave;
     //private EditText mEtContent;
     private TextView mTvSource,mTvTarget;
 
@@ -175,6 +176,7 @@ public class MainActivity extends Activity {
         mBtnQ5 = (Button) findViewById(R.id.buttonQ5);
         mBtnQ6 = (Button) findViewById(R.id.buttonQ6);
         mBtnQ22 = (Button) findViewById(R.id.buttonQ22);
+        mBtnQ27 = (Button) findViewById(R.id.buttonQ27);
         mBtnOpen = (Button) findViewById(R.id.buttonOpen);
         mBtnBatchSave = (Button) findViewById(R.id.buttonBatchSave);
         //mEtContent = (EditText) findViewById(R.id.EditTextContent);
@@ -190,6 +192,7 @@ public class MainActivity extends Activity {
         mBtnQ5.setOnClickListener(mBtnOCL);
         mBtnQ6.setOnClickListener(mBtnOCL);
         mBtnQ22.setOnClickListener(mBtnOCL);
+        mBtnQ27.setOnClickListener(mBtnOCL);
         mBtnBatchSave.setOnClickListener(mBtnOCL);
     }
 
@@ -224,6 +227,8 @@ public class MainActivity extends Activity {
                 mTvTarget.setText(highLightWord(convertTextFileQ6(currentFilePath)));
             }else if(v.getId() == mBtnQ22.getId()){
                 mTvTarget.setText(highLightWord(convertTextFileQ22(currentFilePath)));
+            }else if(v.getId() == mBtnQ27.getId()){
+                mTvTarget.setText(highLightWord(convertTextFileQ27(currentFilePath)));
             }
             /*
             if( !(v instanceof EditText)){
@@ -418,6 +423,10 @@ public class MainActivity extends Activity {
     private String convertTextFileQ22(String path){
         File file = new File(path);
         return convertTextFileQ22(file);
+    }
+    private String convertTextFileQ27(String path){
+        File file = new File(path);
+        return convertTextFileQ27(file);
     }
     private boolean contains(String str,String[] strTable){
         for(String strCmp:strTable){
@@ -1245,6 +1254,195 @@ public class MainActivity extends Activity {
                         if(isLineValid){
                             subString = "DW\t\t";
                             subString += b.toString();
+                            if(partCnt==1){
+                                subList.get(subList.size()-1).add(subString);
+                            }
+                        }/*else{
+                            subString = ";\tDW\t\t";
+                        }*/
+                    }else{
+                        if(isLineValid){
+                            mainString = "DW\t";
+                        }else{
+                            mainString = ";\tDW\t";
+                        }
+                        mainString += b.toString();
+                        if(partCnt==1){
+                            String label = qName+"_"+mainList.size();
+                            labelList.add(label);
+                            subListContent = new ArrayList<String>();
+                            mainList.add(mainString);
+                            subList.add(subListContent);
+                            validLineList.add(new boolean[]{isLineValid});
+                        }else{
+                            if(isLineValid)
+                                wrongList.add(mainString);
+                        }
+                    }
+                }else{
+                    if(semicolonCnt == 0) {
+                        if(partCnt == 1){
+                            String label = qName+"_WRONG_ANS";
+                            labelList.add(label);
+                        }
+                        partCnt++;
+                        lineCnt = 0;
+                    }
+                    semicolonCnt++;
+                }
+
+            }
+            firstlineData[5] = labelList.size()-1;
+            firstlineData[6] = wrongList.size();
+            reader.close();
+
+        }catch(IOException e){
+            e.printStackTrace();
+            return null;
+        }
+        String result = "";
+
+
+        //////////////////////////////////////////////
+        //Header
+        //////////////////////////////////////////////
+        /**/
+        result += ";" + file.getName() + "\n";
+        for(int i=0;i<8;i++){
+            result += ";" + FIRST_COMMENTS[i] +"\n";
+            result += "DW\t" + Integer.toString(firstlineData[i]) + "\n";
+        }
+        //////////////////////////////////////////////
+        //Address
+        result += ";Question Address:\n";
+        for(String label:labelList){
+            result += "DW\t" + label + "$L,\t" + label + "$M,\t" +label + "$H\n";
+        }
+        //////////////////////////////////////////////
+        //Contents
+        StringBuilder contentString = new StringBuilder();
+        for(int i=0;i<mainList.size();i++){
+            String validSign = validLineList.get(i)[0]?"":";";
+            contentString.append(labelList.get(i)).append(":\n");
+            contentString.append(validSign).append(mainList.get(i)).append("\n");
+            contentString.append(validSign).append("\tDW\t" +subList.get(i).size()).append(","+USER_END_WORD).append(","+USER_END_WORD).append(","+USER_END_WORD).append(";Counts\n");
+            for(int j=0;j<subList.get(i).size();j++){
+                contentString.append(validSign).append(subList.get(i).get(j)).append(";"+j+"\n");
+            }
+        }
+        contentString.append(labelList.get(labelList.size()-1)).append(":\n");
+        for(String str:wrongList){
+            contentString.append(str).append("\n");
+        }
+        result +=contentString.toString();
+
+
+        //////////////////////////////////////////////
+        /*
+        if(subLineMax >=3){
+            result += "\n//subLineMax is: "+subLineMax;
+        }
+        */
+        return result;
+    }
+
+    private String convertTextFileQ27(File file){
+
+        String name = file.getName().toLowerCase();
+        int tabIndex = 0;
+        boolean tabFound = false;
+        for(int i=0;i<MAX_QUESTION_NUM;i++){
+            String str = UserTable.QUESION_NAME[i].toLowerCase();
+            if(name.contains(str)){
+                tabIndex = i;
+                tabFound = true;
+                break;
+            }
+        }
+        int Q_Range = UserTable.Q_RANGE[tabIndex];
+        int Q_Type = UserTable.Q_TYPE[tabIndex];
+        int Q_Type2 = UserTable.Q_TYPE2[tabIndex];
+        int Q_TotalAns = UserTable.Q_TOTALANS[tabIndex];
+        int Q_Help = UserTable.Q_HELP[tabIndex];
+        firstlineData[0] = 27;//Q_Range;
+        firstlineData[1] = Q_Type;
+        firstlineData[2] = Q_Type2;
+        firstlineData[3] = Q_TotalAns;
+        firstlineData[4] = Q_Help;
+
+        String qName = "_"+ (tabFound?UserTable.QUESION_NAME[tabIndex]:"NIL");
+
+        List<String> labelList = new ArrayList<String>();
+        List<String> mainList = new ArrayList<String>();
+        List<List<String>> subList = new ArrayList<List<String>>();
+        List<String> subListContent;
+        List<String> wrongList = new ArrayList<String>();
+        List<boolean[]> validLineList = new ArrayList<boolean[]>();
+
+
+        //StringBuilder stringbuilder = new StringBuilder();
+
+        String lineString = null;
+        String mainString = "";
+        String subString = "";
+        int semicolonCnt  = 0;
+        int partCnt = 0;
+        int lineCnt = 0;
+        BufferedReader reader;
+        boolean isSubLine = false;
+
+        Pattern pattern = Pattern.compile(FILTER_PATTERN);
+        Pattern patternNum = Pattern.compile(NUMBER_PATTERN);
+        try{
+            reader = new BufferedReader(new FileReader(file));
+            while((lineString=reader.readLine()) != null){
+                if(!lineString.contains(";") && (lineString.indexOf(';')<5)){
+                    semicolonCnt = 0;
+
+                    Matcher m = pattern.matcher(lineString);
+                    Matcher numMatcher = patternNum.matcher(lineString);
+                    String str = "";
+                    StringBuilder b = new StringBuilder();
+                    StringBuilder nSB = new StringBuilder();
+
+                    int wordCnt = 0;
+                    while (m.find()){
+                        str = lineString.substring(m.start(),m.end());
+                        b.append(str);
+                        wordCnt++;
+                        if(wordCnt<4)b.append(USER_DIVIDER);
+                    }
+                    if(wordCnt>0){
+                        for(int i=wordCnt;i<4;i++){
+                            b.append(USER_END_WORD);
+                            if(i<3)b.append(USER_DIVIDER);
+                        }
+                    }else{
+                        while (numMatcher.find()){
+                            str = lineString.substring(numMatcher.start(),numMatcher.end());
+                            nSB.append(str).append(",\t");
+                        }
+                        for(int i=1;i<4;i++){
+                            nSB.append(USER_END_WORD);
+                            if(i<3)nSB.append(USER_DIVIDER);
+                        }
+                    }
+
+
+
+                    boolean isLineValid = !contains(lineString,NotExistSoundList);
+
+                    int subLineIndex = lineString.indexOf(' ');
+                    isSubLine = (subLineIndex<5 && subLineIndex>-1);
+
+                    if(isSubLine){
+                        if(isLineValid){
+                            subString = "DW\t\t";
+                            if(wordCnt>0){
+                                subString += b.toString();
+                            }else{
+                                subString += nSB.toString();
+                            }
                             if(partCnt==1){
                                 subList.get(subList.size()-1).add(subString);
                             }
