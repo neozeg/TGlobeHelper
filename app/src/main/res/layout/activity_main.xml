@@ -63,6 +63,11 @@
             android:layout_height="wrap_content"
             android:text="Q27"
             android:id="@+id/buttonQ27" />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Q34"
+            android:id="@+id/buttonQ34" />
     </LinearLayout>
 
     <ScrollView
